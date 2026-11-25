@@ -55,8 +55,25 @@ function start(){answers=[];index=0;question()}
 function dim(i,k){return k===2?(i%2?3:2):k}
 function question(){const row=rows[index];page.innerHTML='<article><small>'+['日常习惯','处事方式','社交模式','情绪反应','兴趣偏好'][Math.floor(index/8)]+'　／　'+(index+1)+' / 40</small><progress aria-label="已答题数" value="'+index+'" max="40"></progress><h2 tabindex="-1">'+row[0]+'</h2><nav>'+[0,1,2].map((_,j)=>{const k=(j+index)%3;return '<button onclick="pick('+k+')"><b>'+['甲','乙','丙'][j]+'</b>'+row[k+1]+'</button>'}).join('')+'</nav>'+(index?'<button onclick="index--;question()">← 上一题</button>':'')+'</article>';page.querySelector('h2').focus()}
 function pick(k){answers[index]=dim(index,k);if(++index===rows.length)result();else question()}
-function match(a){const s=[0,0,0,0];a.forEach(k=>s[k]+=1/a.length);const scores=profiles.map(p=>p[7].reduce((sum,v,i)=>sum+(v-s[i])**2,0));return scores.indexOf(Math.min(...scores))}
-function result(){const p=profiles[match(answers)];page.innerHTML=art+'<article><small>人物性情图鉴　／　'+p[1]+'卷</small><h1 tabindex="-1">'+p[0]+'</h1><blockquote>'+p[2]+'</blockquote><dl>'+['性格特点','匹配理由','隐藏优势','趣味彩蛋'].map((label,i)=>'<dt>'+label+'</dt><dd>'+p[i+3]+'</dd>').join('')+'</dl><button onclick="start()">重新测试　↻</button></article>';page.querySelector('h1').focus()}
+// 每一题以随机选择时的期望分为基准；抵消各维度出现次数不同的影响。
+// 各画像按其方向上分数的标准差归一化，保留轻微但稳定的个人偏好。
+function match(answers){
+ const weights=[[0,1,0,0],[1,1,-.5,-.5],[.6,-.6,1,0],[1,0,0,0],[0,0,1,0],[0,.65,-.3,1],[0,0,0,1]];
+ let best=-Infinity,winner=0;
+ weights.forEach((w,p)=>{
+   let sum=0,variance=0;
+   answers.forEach((choice,i)=>{
+     const values=[0,1,2].map(k=>w[dim(i,k)]);
+     const mean=values.reduce((a,b)=>a+b,0)/3;
+     sum+=w[choice]-mean;
+     variance+=values.reduce((v,n)=>v+(n-mean)**2,0)/3;
+   });
+   const score=sum/Math.sqrt(variance);
+   if(score>best){best=score;winner=p}
+ });
+ return winner;
+}function result(){const p=profiles[match(answers)];page.innerHTML=art+'<article><small>人物性情图鉴　／　'+p[1]+'卷</small><h1 tabindex="-1">'+p[0]+'</h1><blockquote>'+p[2]+'</blockquote><dl>'+['性格特点','匹配理由','隐藏优势','趣味彩蛋'].map((label,i)=>'<dt>'+label+'</dt><dd>'+p[i+3]+'</dd>').join('')+'</dl><button onclick="start()">重新测试　↻</button></article>';page.querySelector('h1').focus()}
 home();
 </script></html>
+
 
